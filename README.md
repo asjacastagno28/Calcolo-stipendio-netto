@@ -1,1 +1,245 @@
 # Calcolo-stipendio-netto
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calcolo Stipendio Netto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a40ec 0%, #9adbbd 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        body > div {
+            text-align: center;
+        }
+
+        form {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1a40ec;
+        }
+
+        select {
+            cursor: pointer;
+            background-color: white;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #1a40ec 0%, #9adbbd 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        #result {
+            margin-top: 20px;
+        }
+
+        .result-box {
+            background-color: #f0f4ff;
+            border: 2px solid #1a40ec;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            transition: transform 0.2s, background-color 0.2s;
+            cursor: default;
+        }
+
+        .result-box:hover {
+            background-color: #e0e7ff;
+            transform: scale(1.03);
+        }
+
+        .contract-info {
+            background-color: #b4dbff;
+            border: 2px solid #1505a1;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #000000;
+            text-align: left;
+        }
+
+
+    </style>
+</head>
+<body>
+    <div style="max-width: 500px; margin: 0 auto;">
+        <h1>Calcolo Stipendio Netto</h1>
+        <form id="salaryForm">
+            <label for="grossSalary">Stipendio Lordo Annuale (€):</label>
+            <input type="number" id="grossSalary" name="grossSalary" placeholder="Es. 30000" required>
+
+            <label for="contractType">Tipologia Contratto:</label>
+            <select id="contractType" name="contractType" required>
+                <option value="">-- Seleziona --</option>
+                <option value="pubblico">Dipendente Pubblico</option>
+                <option value="privato">Dipendente Privato</option>
+                <option value="apprendistato">Apprendistato</option>
+            </select>
+
+            <button type="submit">Calcola Stipendio Netto</button>
+        </form>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        //calcolo le detrazioni IRPEF
+        function calculateDetIRPEF(income) {
+            let add = 0;
+            
+            if (income <= 15000) {
+                add = 1955;
+            } else if (income <= 28000) {
+                add = 1910 + 1190 * ((28000 - income) / 13000);
+            } else if (income <= 50000) {
+                add = 1910 * ((50000 - income) / 22000);
+            } else {
+                add = 0;
+            }
+            
+            return add;
+        }
+
+        // calcolo IRPEF
+        function calculateIRPEF(income) {
+            let tax = 0;
+            
+            if (income <= 28000) {
+                tax = income * 0.23;
+            } else if (income <= 50000) {
+                tax = 6440 + ((income - 28000) * 0.33);
+            } else {
+                tax = 14140 + ((income - 50000) * 0.43);
+            }
+            
+            return tax;
+        }
+
+        document.getElementById("salaryForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            const grossSalary = parseFloat(document.getElementById("grossSalary").value);
+            const contractType = document.getElementById("contractType").value;
+
+            if (isNaN(grossSalary) || !contractType) {
+                document.getElementById("result").innerHTML = "<div class='result-box'>Inserisci valori validi.</div>";
+                return;
+            }
+
+            let netSalaryAnnual, taxesPaid, contributions, info;
+
+            switch(contractType) {
+                case "pubblico":
+                    // Dipendente Pubblico: INPS 8.80%
+                    contributions = grossSalary * 0.0880;
+                    const taxableIncomePub = grossSalary - contributions;
+                    const detIrpefPub = calculateDetIRPEF(taxableIncomePub);
+                    const irpefPub = calculateIRPEF(taxableIncomePub);
+                    const addizionaliPubC = taxableIncomePub * 0.0243;
+                    const addizionaliPubR = taxableIncomePub * 0.008;
+                    netSalaryAnnual = taxableIncomePub + detIrpefPub - irpefPub - addizionaliPubC - addizionaliPubR;
+                    taxesPaid = grossSalary - netSalaryAnnual;
+                    info = "Contratto Dipendente Pubblico con contributi INPS 8.80%";
+                    break;
+
+                case "privato":
+                    // Dipendente Privato: INPS 9.19% 
+                    contributions = grossSalary * 0.0919;
+                    const taxableIncomePriv = grossSalary - contributions;
+                    const detIrpefPriv = calculateDetIRPEF(taxableIncomePriv);
+                    const irpefPriv = calculateIRPEF(taxableIncomePriv);
+                    const addizionaliPrivC = taxableIncomePriv * 0.0243;
+                    const addizionaliPrivR = taxableIncomePriv * 0.008;
+                    netSalaryAnnual = taxableIncomePriv + detIrpefPriv - irpefPriv - addizionaliPrivC - addizionaliPrivR;
+                    taxesPaid = grossSalary - netSalaryAnnual;
+                    info = "Contratto Dipendente Privato con contributi INPS 9.19%";
+                    break;
+
+                case "apprendistato":
+                    // Apprendistato: 5.84% INPS
+                    contributions = grossSalary * 0.0584;
+                    const taxableIncomeApp = grossSalary - contributions;
+                    const detIrpefApp = calculateDetIRPEF(taxableIncomeApp);
+                    const irpefApp = calculateIRPEF(taxableIncomeApp);
+                    const addizionaliIncomeAppC = taxableIncomeApp * 0.0243;
+                    const addizionaliIncomeAppR = taxableIncomeApp * 0.008;
+                    netSalaryAnnual = taxableIncomeApp + detIrpefApp - irpefApp - addizionaliIncomeAppC - addizionaliIncomeAppR;
+                    taxesPaid = grossSalary - netSalaryAnnual;
+                    info = "Apprendistato con contributi INPS 5.84%";
+                    break;
+
+                default:
+                    document.getElementById("result").innerHTML = "<div class='result-box'>Seleziona una tipologia di contratto.</div>";
+                    return;
+            }
+
+            const netSalaryMonthly = netSalaryAnnual / 12;
+            const netSalaryMonthly13 = netSalaryAnnual / 13;
+
+            document.getElementById("result").innerHTML =
+                `<div class="contract-info">${info}</div>` +
+                `<div class="result-box">Stipendio Netto Annuale: €${netSalaryAnnual.toFixed(2)}</div>` +
+                `<div class="result-box">Stipendio Netto Mensile (12 mensilità): €${netSalaryMonthly.toFixed(2)}</div>` +
+                `<div class="result-box">Stipendio Netto Mensile (13 mensilità): €${netSalaryMonthly13.toFixed(2)}</div>` +
+                `<div class="result-box">Tasse e Contributi Pagati: €${taxesPaid.toFixed(2)}</div>`
+        });
+    </script>
+</body>
+</html>
